@@ -1,20 +1,16 @@
-﻿using System.Collections.Generic;
-using Modding;
-using UnityEngine;
-using SFCore;
+﻿using Modding;
 using Satchel;
-using JetBrains.Annotations;
-using System.Threading.Tasks;
+using SFCore;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace Lego_Power_Bricks
 {
     /*To do list:
     - Add current multiplier next to geo count
     - Geo magnet
-    - Regenerate hp
-    - Increase hp
     - Contact Damage 
-    - Brick detector
     - Super slap (everything dies in 1 hit)
     - Soft landing
 
@@ -75,12 +71,24 @@ namespace Lego_Power_Bricks
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
 
+    public class IncreaseHealth : EasyCharm
+    {
+        protected override int GetCharmCost() => 0;
+        protected override string GetDescription() => "Increases max health";
+        protected override string GetName() => "Increase health";
+        protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
+    }
+
     public class Settings
     {
         public Dictionary<string, EasyCharmState> Charms;
     }
     public class Lego_Power_Bricks : Mod, ILocalSettings<Settings>
     {
+        public Lego_Power_Bricks() : base("Lego Power Bricks") { }
+        public override string GetVersion() => "0.1";
+        private bool healing = false;
+        private bool healthIncreased = false;
         internal static Lego_Power_Bricks Instance;
         internal Settings localSettings = new Settings();
         internal Dictionary<string, EasyCharm> Charms = new Dictionary<string, EasyCharm>
@@ -91,28 +99,29 @@ namespace Lego_Power_Bricks
             {"x8Multiplier", new x8Multiplier()},
             {"x10Multiplier", new x10Multiplier()},
             {"geoMagnet", new GeoMagnet()},
-            {"regenerateHealth", new RegenerateHeatlh()}
+            {"regenerateHealth", new RegenerateHeatlh()},
+            {"increaseHealth", new IncreaseHealth()}
         };
 
 
         public override void Initialize(Dictionary<string, Dictionary<string, GameObject>> preloadedObjects)
         {
             On.HeroController.AddGeo += AddGeo;
-            //On.GameManager.CalculateNotchesUsed += OnCalculateNotches;
             ModHooks.CharmUpdateHook += OnCharmUpdate;
             ModHooks.HeroUpdateHook += OnHeroUpdate;
         }
         public void OnHeroUpdate()
         {
-            //if (PlayerData.instance.health < PlayerData.instance.maxHealth && Charms["regenerateHealth"].IsEquipped)
-            //{
-            //    Log("PlayerHealth is lower, run Add Health");
-            //    AddHealth(); // Explicitly discard the returned Task to suppress CS4014
-            //}
+            if (PlayerData.instance.health < PlayerData.instance.maxHealth
+                && Charms["regenerateHealth"].IsEquipped && !healing)
+            {
+                GameManager.instance.StartCoroutine(RegenerateHealth());
+            }
         }
+
         public void OnCharmUpdate(PlayerData data, HeroController controller)
         {
-            Log($"OnCharmUpdate called with data: {data} and {controller}");
+            Log($"OnCharmUpdate called");
             if (Charms["geoMagnet"].IsEquipped)
             {
                 data.CalculateNotchesUsed();
@@ -127,38 +136,51 @@ namespace Lego_Power_Bricks
             {
                 data.CalculateNotchesUsed();
             }
+            if (Charms["increaseHealth"].IsEquipped && !healthIncreased)
+            {
+                healthIncreased = true;
+                HeroController.instance.AddToMaxHealth(2);
+            }
+            else if (healthIncreased)
+            {
+                healthIncreased = false;
+                HeroController.instance.AddToMaxHealth(-2);
+            }
         }
-        //async Task AddHealth()
-        //{
-        //    if (!Charms["regenerateHealth"].IsEquipped) return;
-        //    await Task.Delay(5000); // Wait for 5 seconds before regenerating health
-        //    PlayerData.instance.health++;
-        //}
+        private IEnumerator RegenerateHealth()
+        {
+            healing = true;
+            yield return new WaitForSeconds(5f);
+            HeroController.instance.AddHealth(1);
+            healing = false;
+        }
+
 
         public void AddGeo(On.HeroController.orig_AddGeo orig, HeroController self, int amount)
         {
+            int multiplier = 1;
             if (Charms["x2Multiplier"].IsEquipped)
             {
-                amount *= 2; // Double the amount of geo gained
+                multiplier *= 2; // Double the amount of geo gained
             }
             if (Charms["x4Multiplier"].IsEquipped)
             {
-                amount *= 4; // Quadruple the amount of geo gained
+                multiplier *= 4; // Quadruple the amount of geo gained
             }
             if (Charms["x6Multiplier"].IsEquipped)
             {
-                amount *= 6; // Sextuple the amount of geo gained
+                multiplier *= 6; // Sextuple the amount of geo gained
             }
             if (Charms["x8Multiplier"].IsEquipped)
             {
-                amount *= 8; // Octuple the amount of geo gained
+                multiplier *= 8; // Octuple the amount of geo gained
             }
             if (Charms["x10Multiplier"].IsEquipped)
             {
-                amount *= 10; // Decuple the amount of geo gained
+                multiplier *= 10; // Decuple the amount of geo gained
             }
             // Check if the player has the x2 multiplier charm equipped
-            orig(self, amount);
+            orig(self, amount * multiplier);
         }
         public void OnLoadLocal(Settings s)
         {
