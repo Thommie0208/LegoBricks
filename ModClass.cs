@@ -11,9 +11,6 @@ namespace Lego_Power_Bricks
     - Add current multiplier next to geo count
     - Geo magnet
     - Contact Damage 
-    - Super slap (everything dies in 1 hit)
-    - Soft landing
-
      */
     public class x2Multiplier : EasyCharm
     {
@@ -79,6 +76,21 @@ namespace Lego_Power_Bricks
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
 
+    public class SuperSlap : EasyCharm
+    {
+        protected override int GetCharmCost() => 0;
+        protected override string GetDescription() => "Significantly increases nail damage";
+        protected override string GetName() => "Super Slap";
+        protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
+    }
+    public class SoftFall : EasyCharm
+    {
+        protected override int GetCharmCost() => 0;
+        protected override string GetDescription() => "Removes hard falls";
+        protected override string GetName() => "Soft Fall";
+        protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
+    }
+
     public class Settings
     {
         public Dictionary<string, EasyCharmState> Charms;
@@ -89,6 +101,10 @@ namespace Lego_Power_Bricks
         public override string GetVersion() => "0.1";
         private bool healing = false;
         private bool healthIncreased = false;
+        private bool nailDamageIncreased = false;
+        private bool hardFallTimeIncreased = false;
+        private int geoMultiplier;
+        private float vanillaHardFallTime;
         internal static Lego_Power_Bricks Instance;
         internal Settings localSettings = new Settings();
         internal Dictionary<string, EasyCharm> Charms = new Dictionary<string, EasyCharm>
@@ -100,7 +116,9 @@ namespace Lego_Power_Bricks
             {"x10Multiplier", new x10Multiplier()},
             {"geoMagnet", new GeoMagnet()},
             {"regenerateHealth", new RegenerateHeatlh()},
-            {"increaseHealth", new IncreaseHealth()}
+            {"increaseHealth", new IncreaseHealth()},
+            {"superSlap", new SuperSlap()},
+            {"softFall", new SoftFall()}
         };
 
 
@@ -108,7 +126,7 @@ namespace Lego_Power_Bricks
         {
             On.HeroController.AddGeo += AddGeo;
             ModHooks.CharmUpdateHook += OnCharmUpdate;
-            ModHooks.HeroUpdateHook += OnHeroUpdate;
+            ModHooks.HeroUpdateHook += OnHeroUpdate;            
         }
         public void OnHeroUpdate()
         {
@@ -117,20 +135,24 @@ namespace Lego_Power_Bricks
             {
                 GameManager.instance.StartCoroutine(RegenerateHealth());
             }
+            if (Charms["softFall"].IsEquipped && HeroController.instance.fallTimer > HeroController.instance.BIG_FALL_TIME)
+            {
+                HeroController.instance.BIG_FALL_TIME *= 2;
+            }
         }
 
-        public void OnCharmUpdate(PlayerData data, HeroController controller)
+        public void OnCharmUpdate(PlayerData data, HeroController hc)
         {
             Log($"OnCharmUpdate called");
             if (Charms["geoMagnet"].IsEquipped)
             {
-                data.CalculateNotchesUsed();
                 data.charmCost_1 = 0;
+                data.CalculateNotchesUsed();
             }
             else
             {
-                data.CalculateNotchesUsed();
                 data.charmCost_1 = 1;
+                data.CalculateNotchesUsed();
             }
             if (!Charms["geoMagnet"].IsEquipped && data.equippedCharm_1)
             {
@@ -139,24 +161,55 @@ namespace Lego_Power_Bricks
             if (Charms["increaseHealth"].IsEquipped && !healthIncreased)
             {
                 healthIncreased = true;
-                HeroController.instance.AddToMaxHealth(2);
+                hc.AddToMaxHealth(2);
             }
             else if (healthIncreased)
             {
                 healthIncreased = false;
-                HeroController.instance.AddToMaxHealth(-2);
+                hc.AddToMaxHealth(-2);
+            }
+            if (Charms["x2Multiplier"].IsEquipped || Charms["x4Multiplier"].IsEquipped || Charms["x6Multiplier"].IsEquipped || Charms["x8Multiplier"].IsEquipped || Charms["x10Multiplier"].IsEquipped)
+            {
+                geoMultiplier = CalculateMultiplier();
+            }
+            if (Charms["superSlap"].IsEquipped && !nailDamageIncreased)
+            {
+                data.nailDamage *= 2;
+                nailDamageIncreased = true;
+            }
+            else if (nailDamageIncreased)
+            {
+                data.nailDamage /= 2;
+                nailDamageIncreased = false;
+            }
+            if (Charms["softFall"].IsEquipped && !hardFallTimeIncreased)
+            {
+                vanillaHardFallTime = hc.BIG_FALL_TIME;
+                hc.BIG_FALL_TIME = 999f;
+                hardFallTimeIncreased = true;
+            }
+            else if (hardFallTimeIncreased)
+            {
+                hc.BIG_FALL_TIME = vanillaHardFallTime;
+                hardFallTimeIncreased = false;
             }
         }
         private IEnumerator RegenerateHealth()
         {
             healing = true;
-            yield return new WaitForSeconds(5f);
+            yield return new WaitForSeconds(10f);
             HeroController.instance.AddHealth(1);
             healing = false;
         }
 
 
         public void AddGeo(On.HeroController.orig_AddGeo orig, HeroController self, int amount)
+        {
+            geoMultiplier = CalculateMultiplier();
+            orig(self, amount * geoMultiplier);
+        }
+
+        private int CalculateMultiplier()
         {
             int multiplier = 1;
             if (Charms["x2Multiplier"].IsEquipped)
@@ -179,8 +232,16 @@ namespace Lego_Power_Bricks
             {
                 multiplier *= 10; // Decuple the amount of geo gained
             }
-            // Check if the player has the x2 multiplier charm equipped
-            orig(self, amount * multiplier);
+            UpdateMultiplierText(multiplier);
+            return multiplier;
+        }
+
+        private void UpdateMultiplierText(int newMultiplier)
+        {
+            if (newMultiplier != geoMultiplier)
+            {
+                //Update text somehow
+            }
         }
         public void OnLoadLocal(Settings s)
         {
