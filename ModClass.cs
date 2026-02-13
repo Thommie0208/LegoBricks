@@ -1,9 +1,13 @@
-﻿using Modding;
+﻿using MagicUI.Core;
+using MagicUI.Elements;
+using MagicUI.Graphics;
+using Modding;
 using Satchel;
 using SFCore;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+
 
 namespace Lego_Power_Bricks
 {
@@ -105,6 +109,7 @@ namespace Lego_Power_Bricks
         private bool hardFallTimeIncreased = false;
         private int geoMultiplier;
         private float vanillaHardFallTime;
+        private LayoutRoot? layout;
         internal static Lego_Power_Bricks Instance;
         internal Settings localSettings = new Settings();
         internal Dictionary<string, EasyCharm> Charms = new Dictionary<string, EasyCharm>
@@ -124,9 +129,10 @@ namespace Lego_Power_Bricks
 
         public override void Initialize(Dictionary<string, Dictionary<string, GameObject>> preloadedObjects)
         {
+            On.HeroController.Awake += OnAwake;
             On.HeroController.AddGeo += AddGeo;
             ModHooks.CharmUpdateHook += OnCharmUpdate;
-            ModHooks.HeroUpdateHook += OnHeroUpdate;            
+            ModHooks.HeroUpdateHook += OnHeroUpdate;
         }
         public void OnHeroUpdate()
         {
@@ -141,6 +147,13 @@ namespace Lego_Power_Bricks
             }
         }
 
+        public void OnAwake(On.HeroController.orig_Awake orig, HeroController self)
+        {
+            healthIncreased = Charms["increaseHealth"].IsEquipped;
+            nailDamageIncreased = Charms["superSlap"].IsEquipped;
+            hardFallTimeIncreased = Charms["softFall"].IsEquipped;
+            orig(self);
+        }
         public void OnCharmUpdate(PlayerData data, HeroController hc)
         {
             Log($"OnCharmUpdate called");
@@ -163,7 +176,7 @@ namespace Lego_Power_Bricks
                 healthIncreased = true;
                 hc.AddToMaxHealth(2);
             }
-            else if (healthIncreased)
+            else if (!Charms["increaseHealth"].IsEquipped && healthIncreased)
             {
                 healthIncreased = false;
                 hc.AddToMaxHealth(-2);
@@ -240,9 +253,18 @@ namespace Lego_Power_Bricks
         {
             if (newMultiplier != geoMultiplier)
             {
-                //Update text somehow
+                //layout?.Destroy();
+                //layout = null;
+                //Log("Update Multiplier Text Called");
+                //if (layout == null)
+                //{
+                //    layout = new(true, "Persistent layout");
+                //    layout.RenderDebugLayoutBounds = false;
+                //    GridExample.Setup(layout, newMultiplier);
+                //}
             }
         }
+
         public void OnLoadLocal(Settings s)
         {
             localSettings = s;
@@ -269,6 +291,179 @@ namespace Lego_Power_Bricks
             }
             return localSettings;
         }
-    }
 
+        public static class GridExample
+        {
+            public static void Setup(LayoutRoot layout, int multiplier)
+            {
+                // a grid demonstrating basic proportional control
+                new MagicUI.Elements.GridLayout(layout, "Proportional Grid Example 1")
+                {
+                    MinWidth = 1920, // divide the entire screen's width
+                    ColumnDefinitions =
+                {
+                    new GridDimension(2, GridUnit.Proportional),
+                    new GridDimension(1, GridUnit.Proportional),
+                    new GridDimension(1, GridUnit.Proportional),
+                },
+                    RowDefinitions =
+                {
+                    new GridDimension(2, GridUnit.Proportional),
+                    new GridDimension(1, GridUnit.Proportional),
+                    new GridDimension(1, GridUnit.Proportional),
+                }, 
+                    VerticalAlignment = VerticalAlignment.Bottom,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Children =
+                {
+                    new TextObject(layout)
+                    {
+                        FontSize = 15,
+                        Text = $"{multiplier}",
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
+                    }.WithProp(MagicUI.Elements.GridLayout.Row, 0), // technically you don't need to set this
+                    new TextObject(layout)
+                    {
+                        FontSize = 20,
+                        Text = "This text spans only 1 proportional column\nand drives the height of the grid\nbecause it is tallest.",
+                        VerticalAlignment = VerticalAlignment.Center,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        TextAlignment = HorizontalAlignment.Center,
+                    }.WithProp(MagicUI.Elements.GridLayout.Column, 1),
+                    new TextObject(layout)
+                    {
+                        FontSize = 15,
+                        Text = "Hope you're having a nice day :)",
+                        VerticalAlignment = VerticalAlignment.Center,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                    }.WithProp(MagicUI.Elements.GridLayout.Column, 2),
+                }
+                };
+
+                // another way to do the same thing, demonstrates columnspans
+                new MagicUI.Elements.GridLayout(layout, "Proportional Grid Example 2")
+                {
+                    MinWidth = 1920, // divide the entire screen's width
+                    ColumnDefinitions =
+                {
+                    new GridDimension(1, GridUnit.Proportional),
+                    new GridDimension(1, GridUnit.Proportional),
+                    new GridDimension(1, GridUnit.Proportional),
+                    new GridDimension(1, GridUnit.Proportional),
+                },
+                    VerticalAlignment = VerticalAlignment.Bottom,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Children =
+                {
+                    new TextObject(layout)
+                    {
+                        FontSize = 15,
+                        Text = "This spans 2 proportional columns the same width as the others",
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
+                    }.WithProp(MagicUI.Elements.GridLayout.Column, 0).WithProp(MagicUI.Elements.GridLayout.ColumnSpan, 2),
+                    new TextObject(layout)
+                    {
+                        FontSize = 20,
+                        Text = "This text spans only 1 proportional column\nand drives the height of the grid\nbecause it is tallest.",
+                        VerticalAlignment = VerticalAlignment.Center,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        TextAlignment = HorizontalAlignment.Center,
+                    }.WithProp(MagicUI.Elements.GridLayout.Column, 2),
+                    new TextObject(layout)
+                    {
+                        FontSize = 15,
+                        Text = "Hope you're having a nice day :)",
+                        VerticalAlignment = VerticalAlignment.Center,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                    }.WithProp(MagicUI.Elements.GridLayout.Column, 3)
+                }
+                };
+
+                // more complex usage of grids, mix and match proportional and absolute columns
+                new MagicUI.Elements.GridLayout(layout, "Complex Grid Example")
+                {
+                    Padding = new Padding(10),
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    RowDefinitions =
+                {
+                    new GridDimension(1, GridUnit.Proportional),
+                    new GridDimension(50, GridUnit.AbsoluteMin),
+                    new GridDimension(50, GridUnit.AbsoluteMin),
+                    new GridDimension(3, GridUnit.Proportional),
+                },
+                    ColumnDefinitions =
+                {
+                    new GridDimension(1.5f, GridUnit.Proportional),
+                    new GridDimension(50, GridUnit.AbsoluteMin),
+                    new GridDimension(50, GridUnit.AbsoluteMin),
+                    new GridDimension(5, GridUnit.Proportional),
+                },
+                    MinWidth = 400,
+                    MinHeight = 400,
+                    Children =
+                {
+                    new Image(layout, BuiltInSprites.CreateSlicedBorderRect())
+                    {
+                        Width = 90,
+                        Height = 90,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                    }.WithProp(MagicUI.Elements.GridLayout.Row, 1).WithProp(MagicUI.Elements.GridLayout.Column, 1)
+                    .WithProp(MagicUI.Elements.GridLayout.RowSpan, 2).WithProp(MagicUI.Elements.GridLayout.ColumnSpan, 2),
+                    new Image(layout, BuiltInSprites.CreateQuill())
+                    {
+                        Width = 25,
+                        Height = 25,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Tint = UnityEngine.Color.magenta,
+                    }.WithProp(MagicUI.Elements.GridLayout.Row, 1).WithProp(MagicUI.Elements.GridLayout.Column, 1),
+                    new Image(layout, BuiltInSprites.CreateQuill())
+                    {
+                        Width = 25,
+                        Height = 25,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Tint = UnityEngine.Color.green,
+                    }.WithProp(MagicUI.Elements.GridLayout.Row, 2).WithProp(MagicUI.Elements.GridLayout.Column, 1),
+                    new Image(layout, BuiltInSprites.CreateQuill())
+                    {
+                        Width = 25,
+                        Height = 25,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Tint = UnityEngine.Color.blue,
+                    }.WithProp(MagicUI.Elements.GridLayout.Row, 1).WithProp(MagicUI.Elements.GridLayout.Column, 2),
+                    new Image(layout, BuiltInSprites.CreateQuill())
+                    {
+                        Width = 25,
+                        Height = 25,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Tint = UnityEngine.Color.cyan,
+                    }.WithProp(MagicUI.Elements.GridLayout.Row, 2).WithProp(MagicUI.Elements.GridLayout.Column, 2),
+                    new TextObject(layout)
+                    {
+                        FontSize = 22,
+                        Text = "This is in\nthe largest\ncell",
+                        TextAlignment = HorizontalAlignment.Center,
+                        HorizontalAlignment = HorizontalAlignment.Right,
+                        VerticalAlignment = VerticalAlignment.Bottom,
+                    }.WithProp(MagicUI.Elements.GridLayout.Row, 3).WithProp(MagicUI.Elements.GridLayout.Column, 3),
+                    new TextObject(layout)
+                    {
+                        // using only the available space provided by min size this column should be
+                        // ~70px wide; (400 - 50 - 50) / 6.5 * 1.5 to respect proportionality.
+                        // note that by adding this longer text, the grid becomes much wider than 400px
+                        // to retain the proportionality constraint as the cell grows.
+                        Text = "Wider than 70px"
+                    } // default row and column are 0
+                }
+                };
+            }
+        }
+    }
 }
