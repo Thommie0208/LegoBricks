@@ -1,4 +1,6 @@
-﻿using MagicUI.Core;
+﻿using HutongGames.PlayMaker;
+using HutongGames.PlayMaker.Actions;
+using MagicUI.Core;
 using MagicUI.Elements;
 using MagicUI.Graphics;
 using Modding;
@@ -12,7 +14,8 @@ using UnityEngine;
 namespace Lego_Power_Bricks
 {
     /*To do list:
-     * Consider making MoreHealthBrick compatible with heart charm
+     * Add thorns brick?
+     * Start working on placing them in the world with SFCore somehow
      */
     public class x2Multiplier : EasyCharm
     {
@@ -92,6 +95,13 @@ namespace Lego_Power_Bricks
         protected override string GetName() => "Soft Fall";
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
+    public class InfiniteBlast : EasyCharm
+    {
+        protected override int GetCharmCost() => 0;
+        protected override string GetDescription() => "So anyway, I started blasting.\n\n Makes Vengeful Spirit/Shade Soul cheaper to use";
+        protected override string GetName() => "Infinite blast";
+        protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
+    }
 
     public class Settings
     {
@@ -121,7 +131,8 @@ namespace Lego_Power_Bricks
             {"regenerateHealth", new RegenerateHeatlh()},
             {"increaseHealth", new IncreaseHealth()},
             {"superSlap", new SuperSlap()},
-            {"softFall", new SoftFall()}
+            {"softFall", new SoftFall()},
+            {"infiniteBlast", new InfiniteBlast()}
         };
 
 
@@ -131,6 +142,7 @@ namespace Lego_Power_Bricks
             On.HeroController.AddGeo += AddGeo;
             ModHooks.CharmUpdateHook += OnCharmUpdate;
             ModHooks.HeroUpdateHook += OnHeroUpdate;
+            On.GameCameras.Start += AddMasks;
         }
 
         public void OnHeroUpdate()
@@ -138,6 +150,7 @@ namespace Lego_Power_Bricks
             if (PlayerData.instance.health < PlayerData.instance.maxHealth
                 && Charms["regenerateHealth"].IsEquipped && !healing)
             {
+                Log("Starting health regeneration");
                 GameManager.instance.StartCoroutine(RegenerateHealth());
             }
             if (Charms["softFall"].IsEquipped && HeroController.instance.fallTimer > HeroController.instance.BIG_FALL_TIME)
@@ -212,15 +225,73 @@ namespace Lego_Power_Bricks
                 hc.BIG_FALL_TIME = vanillaHardFallTime;
                 hardFallTimeIncreased = false;
             }
+            if (Charms["infiniteBlast"].IsEquipped)
+            {
+                ModifyVengefulSpirit(hc);
+            }
+            else
+            {
+                UnModifyVengefulSpirit(hc);
+            }
+
         }
         private IEnumerator RegenerateHealth()
         {
+            Log("Started healing");
             healing = true;
-            yield return new WaitForSeconds(10f);
+            yield return new WaitForSeconds(2f);
             HeroController.instance.AddHealth(1);
+            Log("Finished healing");
             healing = false;
         }
 
+        private void ModifyVengefulSpirit(HeroController self)
+        {
+            PlayMakerFSM fsm = self.gameObject.LocateMyFSM("Spell Control");
+            if (fsm == null) return;
+            int newCost = 5;
+            fsm.GetAction<SendMessage>("Fireball 2", 2).functionCall.IntParameter = newCost;
+            fsm.GetAction<SendMessage>("Fireball 1", 2).functionCall.IntParameter = newCost;
+        }
+
+        private void UnModifyVengefulSpirit(HeroController self)
+        {
+            PlayMakerFSM fsm = self.gameObject.LocateMyFSM("Spell Control");
+            if (fsm == null) return;
+            int vanillaCost = (PlayerData.instance.equippedCharm_33) ? 24 : 33;
+            fsm.GetAction<SendMessage>("Fireball 2", 2).functionCall.IntParameter = vanillaCost;
+            fsm.GetAction<SendMessage>("Fireball 1", 2).functionCall.IntParameter = vanillaCost;
+        }
+
+        private void AddMasks(On.GameCameras.orig_Start orig, GameCameras self)
+        {
+            orig(self);
+            Log("Adding masks");
+            MasksOverflow(self);
+        }
+
+        private void MasksOverflow(GameCameras self)
+        {
+            GameObject mask = self.gameObject.Find("HudCamera").Find("Hud Canvas").Find("Health").Find("Health 1");
+            for (int i = 12; i <= 13; i++)
+            {
+                if (mask.transform.parent.gameObject.Find($"Health {i}") == null)
+                {
+                    Log("Adding mask " + i);
+                    GameObject newMask = Object.Instantiate(mask, mask.transform.parent);
+                    newMask.name = $"Health {i}";
+                    newMask.SetActive(true);
+
+                    PlayMakerFSM healthFsm = newMask.LocateMyFSM("health_display");
+                    FsmVariables healthFsmVars = healthFsm.FsmVariables;
+                    healthFsmVars.GetFsmInt("Health Number").Value = i;
+
+                    float xPos = -10.32f + (0.94f * i - 1);
+                    float yPos = 7.7f;
+                    newMask.transform.localPosition = new Vector3(xPos, yPos, -2);
+                }
+            }
+        }
 
         public void AddGeo(On.HeroController.orig_AddGeo orig, HeroController self, int amount)
         {
@@ -309,10 +380,10 @@ namespace Lego_Power_Bricks
                 {
                     TextAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
                     Text = $"X{multiplier}",
-                    FontSize = 50,
+                    FontSize = 35,
                     Font = UI.TrajanBold,
                     ContentColor = UnityEngine.Color.red,
-                    Padding = new(260)
+                    Padding = new(265)
                 };
             }
         }
