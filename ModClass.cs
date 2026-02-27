@@ -110,7 +110,7 @@ namespace Lego_Power_Bricks
     public class Lego_Power_Bricks : Mod, ILocalSettings<Settings>
     {
         public Lego_Power_Bricks() : base("Lego Power Bricks") { }
-        public override string GetVersion() => "0.1";
+        public override string GetVersion() => "0.1.1";
         private bool healing = false;
         private bool healthIncreased = false;
         private bool nailDamageIncreased = false;
@@ -142,7 +142,7 @@ namespace Lego_Power_Bricks
             On.HeroController.AddGeo += AddGeo;
             ModHooks.CharmUpdateHook += OnCharmUpdate;
             ModHooks.HeroUpdateHook += OnHeroUpdate;
-            On.GameCameras.Start += AddMasks;
+            On.GameCameras.StartScene += AddMasks;
         }
 
         public void OnHeroUpdate()
@@ -157,7 +157,7 @@ namespace Lego_Power_Bricks
             {
                 HeroController.instance.BIG_FALL_TIME *= 2;
             }
-            if (layout != null && GameManager.instance.inventoryFSM.ActiveStateName == "Opened" || GameManager.instance.gameState.ToString() != "PLAYING")
+            if (layout != null && GameManager.instance.inventoryFSM.ActiveStateName == "Opened" || GameManager.instance.inventoryFSM.ActiveStateName == "Open Current Pane" || GameManager.instance.gameState.ToString() != "PLAYING")
             {
                 DestroyUI();
             }
@@ -263,11 +263,12 @@ namespace Lego_Power_Bricks
             fsm.GetAction<SendMessage>("Fireball 1", 2).functionCall.IntParameter = vanillaCost;
         }
 
-        private void AddMasks(On.GameCameras.orig_Start orig, GameCameras self)
+        private void AddMasks(On.GameCameras.orig_StartScene orig, GameCameras self)
         {
             orig(self);
             Log("Adding masks");
             MasksOverflow(self);
+            On.GameCameras.StartScene -= AddMasks;
         }
 
         private void MasksOverflow(GameCameras self)
@@ -302,25 +303,12 @@ namespace Lego_Power_Bricks
         private int CalculateMultiplier()
         {
             int multiplier = 1;
-            if (Charms["x2Multiplier"].IsEquipped)
+            for (int i = 2; i<=10; i+=2)
             {
-                multiplier *= 2; // Double the amount of geo gained
-            }
-            if (Charms["x4Multiplier"].IsEquipped)
-            {
-                multiplier *= 4; // Quadruple the amount of geo gained
-            }
-            if (Charms["x6Multiplier"].IsEquipped)
-            {
-                multiplier *= 6; // Sextuple the amount of geo gained
-            }
-            if (Charms["x8Multiplier"].IsEquipped)
-            {
-                multiplier *= 8; // Octuple the amount of geo gained
-            }
-            if (Charms["x10Multiplier"].IsEquipped)
-            {
-                multiplier *= 10; // Decuple the amount of geo gained
+                if (Charms[$"x{i}Multiplier"].IsEquipped)
+                {
+                    multiplier *= i;
+                }
             }
             UpdateMultiplierText(multiplier);
             return multiplier;
@@ -375,7 +363,6 @@ namespace Lego_Power_Bricks
         {
             public static void Setup(LayoutRoot layout, int multiplier)
             {
-                // a grid demonstrating basic proportional control
                 new TextObject(layout)
                 {
                     TextAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
