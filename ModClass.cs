@@ -2,7 +2,6 @@
 using HutongGames.PlayMaker.Actions;
 using MagicUI.Core;
 using MagicUI.Elements;
-using MagicUI.Graphics;
 using Modding;
 using Satchel;
 using SFCore;
@@ -115,6 +114,7 @@ namespace Lego_Power_Bricks
         private bool healthIncreased = false;
         private bool nailDamageIncreased = false;
         private bool hardFallTimeIncreased = false;
+        private bool vengefulSpiritModified = false;
         private int geoMultiplier;
         private float vanillaHardFallTime = 1.1f;
         private LayoutRoot? layout;
@@ -143,6 +143,10 @@ namespace Lego_Power_Bricks
             ModHooks.CharmUpdateHook += OnCharmUpdate;
             ModHooks.HeroUpdateHook += OnHeroUpdate;
             On.GameCameras.StartScene += AddMasks;
+            if (ModHooks.GetMod("DebugMod") is Mod)
+            {
+                HookDebug();
+            }
         }
 
         public void OnHeroUpdate()
@@ -172,6 +176,7 @@ namespace Lego_Power_Bricks
             healthIncreased = Charms["increaseHealth"].IsEquipped;
             nailDamageIncreased = Charms["superSlap"].IsEquipped;
             hardFallTimeIncreased = Charms["softFall"].IsEquipped;
+            vengefulSpiritModified = Charms["infiniteBlast"].IsEquipped;
             orig(self);
         }
         public void OnCharmUpdate(PlayerData data, HeroController hc)
@@ -220,18 +225,20 @@ namespace Lego_Power_Bricks
                 hc.BIG_FALL_TIME = 999f;
                 hardFallTimeIncreased = true;
             }
-            else if (hardFallTimeIncreased)
+            else if (!Charms["softFall"].IsEquipped && hardFallTimeIncreased)
             {
                 hc.BIG_FALL_TIME = vanillaHardFallTime;
                 hardFallTimeIncreased = false;
             }
-            if (Charms["infiniteBlast"].IsEquipped)
+            if (Charms["infiniteBlast"].IsEquipped && !vengefulSpiritModified)
             {
                 ModifyVengefulSpirit(hc);
+                vengefulSpiritModified = true;
             }
-            else
+            else if (!Charms["infiniteBlast"].IsEquipped && vengefulSpiritModified)
             {
                 UnModifyVengefulSpirit(hc);
+                vengefulSpiritModified = false;
             }
 
         }
@@ -249,10 +256,30 @@ namespace Lego_Power_Bricks
         {
             PlayMakerFSM fsm = self.gameObject.LocateMyFSM("Spell Control");
             if (fsm == null) return;
-            int newCost = 5;
+            int newCost = 10;
+            FsmState CanCastOld = fsm.GetValidState("Can Cast?");
+            var CanCastVS = fsm.AddState("Can Cast? FIREBALL");
+            var CanCastQuake = fsm.AddState("Can Cast? QUAKE");
+            var CanCastScream = fsm.AddState("Can Cast? SCREAM");
+            fsm.AddTransition("Can Cast? FIREBALL", "CANCEL", "Inactive");
+            fsm.AddTransition("Can Cast? FIREBALL", "FINISHED", "Has Fireball?");
+            fsm.AddTransition("Can Cast? QUAKE", "CANCEL", "Inactive");
+            fsm.AddTransition("Can Cast? QUAKE", "FINISHED", "Has Quake?");
+            fsm.AddTransition("Can Cast? SCREAM", "CANCEL", "Inactive");
+            fsm.AddTransition("Can Cast? SCREAM", "FINISHED", "Has Scream?");
+            fsm.ChangeTransition("Button Down", "BUTTON UP", "QC");
+            fsm.ChangeTransition("Inactive", "QUICK CAST", "QC");
+            fsm.ChangeTransition("QC", "FIREBALL", "Can Cast? FIREBALL");
+            fsm.ChangeTransition("QC", "QUAKE", "Can Cast? QUAKE");
+            fsm.ChangeTransition("QC", "SCREAM", "Can Cast? SCREAM");
+            CanCastVS.CopyActionData(CanCastOld);
+            CanCastQuake.CopyActionData(CanCastOld);
+            CanCastScream.CopyActionData(CanCastOld);
+            fsm.GetAction<IntCompare>("Can Cast? FIREBALL", 2).integer2 = newCost;
             fsm.GetAction<SendMessage>("Fireball 2", 2).functionCall.IntParameter = newCost;
             fsm.GetAction<SendMessage>("Fireball 1", 2).functionCall.IntParameter = newCost;
         }
+
 
         private void UnModifyVengefulSpirit(HeroController self)
         {
@@ -261,6 +288,14 @@ namespace Lego_Power_Bricks
             int vanillaCost = (PlayerData.instance.equippedCharm_33) ? 24 : 33;
             fsm.GetAction<SendMessage>("Fireball 2", 2).functionCall.IntParameter = vanillaCost;
             fsm.GetAction<SendMessage>("Fireball 1", 2).functionCall.IntParameter = vanillaCost;
+            fsm.RemoveState("Can Cast? FIREBALL");
+            fsm.RemoveState("Can Cast? QUAKE");
+            fsm.RemoveState("Can Cast? SCREAM");
+            fsm.ChangeTransition("Button Down", "BUTTON UP", "Can Cast?");
+            fsm.ChangeTransition("Inactive", "QUICK CAST", "Can Cast? QC");
+            fsm.ChangeTransition("QC", "FIREBALL", "Has Fireball?");
+            fsm.ChangeTransition("QC", "QUAKE", "Has Quake?");
+            fsm.ChangeTransition("QC", "SCREAM", "Has Scream?");
         }
 
         private void AddMasks(On.GameCameras.orig_StartScene orig, GameCameras self)
@@ -296,7 +331,7 @@ namespace Lego_Power_Bricks
 
         public void AddGeo(On.HeroController.orig_AddGeo orig, HeroController self, int amount)
         {
-            geoMultiplier = CalculateMultiplier();
+            //geoMultiplier = CalculateMultiplier();
             orig(self, amount * geoMultiplier);
         }
 
@@ -324,6 +359,26 @@ namespace Lego_Power_Bricks
                 layout.RenderDebugLayoutBounds = false;
                 SimpleLayout.Setup(layout, newMultiplier);
             }
+        }
+
+        private void HookDebug()
+        {
+            DebugMod.BindableFunctions.OnGiveAllCharms += () => {
+                foreach (var charm in Charms.Values)
+                {
+                    charm.GiveCharm();
+                }
+                PlayerData.instance.CountCharms();
+            };
+
+            DebugMod.BindableFunctions.OnRemoveAllCharms += () => {
+                foreach (var charm in Charms.Values)
+                {
+                    charm.TakeCharm();
+                }
+                PlayerData.instance.CountCharms();
+                OnCharmUpdate(PlayerData.instance, HeroController.instance);
+            };
         }
 
         public void OnLoadLocal(Settings s)
