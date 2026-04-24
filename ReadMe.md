@@ -9,3 +9,6 @@ The added bricks are:
 - Regenerate health
 - Increase health
 - Free gathering swarm
+- Reduce cost to cast Vengeful Spirit/Shade Soul
+
+Currently you can only give yourself these bricks using the 'Give all charms' button in Debug, but I'm planning on adding overworld locations eventually.
