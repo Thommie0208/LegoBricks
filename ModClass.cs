@@ -15,7 +15,7 @@ namespace Lego_Power_Bricks
     public class x2Multiplier : EasyCharm
     {
         protected override int GetCharmCost() => 0;
-        protected override string GetDescription() => "Multiplies geo worth by 2";
+        protected override string GetDescription() => "Pocket change to be honest, by far the worst brick.\n\nMultiplies geo worth by 2";
         protected override string GetName() => "Geo x2";
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
@@ -23,7 +23,7 @@ namespace Lego_Power_Bricks
     public class x4Multiplier : EasyCharm
     {
         protected override int GetCharmCost() => 0;
-        protected override string GetDescription() => "Multiplies geo worth by 4";
+        protected override string GetDescription() => "There is no way I am thinking of something original for all 5 geo multipliers.\n\nMultiplies geo worth by 4";
         protected override string GetName() => "Geo x4";
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
@@ -31,7 +31,7 @@ namespace Lego_Power_Bricks
     public class x6Multiplier : EasyCharm
     {
         protected override int GetCharmCost() => 0;
-        protected override string GetDescription() => "Multiplies geo worth by 6";
+        protected override string GetDescription() => "Completely wrecks the economy. Thankfully there are only 2 stronger multipliers.\n\nMultiplies geo worth by 6";
         protected override string GetName() => "Geo x6";
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
@@ -39,7 +39,7 @@ namespace Lego_Power_Bricks
     public class x8Multiplier : EasyCharm
     {
         protected override int GetCharmCost() => 0;
-        protected override string GetDescription() => "Multiplies geo worth by 8";
+        protected override string GetDescription() => "To put things in perspective, with this you can do colo 3 three times and be able to affort everything in the game.\n\nMultiplies geo worth by 8";
         protected override string GetName() => "Geo x8";
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
@@ -47,7 +47,7 @@ namespace Lego_Power_Bricks
     public class x10Multiplier : EasyCharm
     {
         protected override int GetCharmCost() => 0;
-        protected override string GetDescription() => "Multiplies geo worth by 10";
+        protected override string GetDescription() => "This will make you hit the geo cap so quickly, you wonder why you even wanted this brick.\n\nMultiplies geo worth by 10";
         protected override string GetName() => "Geo x10";
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
@@ -55,7 +55,7 @@ namespace Lego_Power_Bricks
     public class GeoMagnet : EasyCharm
     {
         protected override int GetCharmCost() => 0;
-        protected override string GetDescription() => "Makes gathering swarm free";
+        protected override string GetDescription() => "As if you ever needed more geo with the other bricks.\n\nMakes gathering swarm free";
         protected override string GetName() => "Geo Magnet";
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
@@ -63,15 +63,15 @@ namespace Lego_Power_Bricks
     public class RegenerateHeatlh : EasyCharm
     {
         protected override int GetCharmCost() => 0;
-        protected override string GetDescription() => "Regenerates health";
-        protected override string GetName() => "Regenerates health";
+        protected override string GetDescription() => "Don't you agree that pesky hiveblood takes too long?\n\nRegenerates lost hearts, once per 7 seconds.";
+        protected override string GetName() => "Health regenerator";
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
 
     public class IncreaseHealth : EasyCharm
     {
         protected override int GetCharmCost() => 0;
-        protected override string GetDescription() => "Increases max health";
+        protected override string GetDescription() => "Does exactly what the name implies.\n\nSeriously, I'm not explaining this one";
         protected override string GetName() => "Increase health";
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
@@ -79,22 +79,29 @@ namespace Lego_Power_Bricks
     public class SuperSlap : EasyCharm
     {
         protected override int GetCharmCost() => 0;
-        protected override string GetDescription() => "Significantly increases nail damage";
+        protected override string GetDescription() => "If Fury of the Fallen and Strength had a child and the child overshadowed both of them.\n\nStrongly increased nail damage";
         protected override string GetName() => "Super Slap";
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
     public class SoftFall : EasyCharm
     {
         protected override int GetCharmCost() => 0;
-        protected override string GetDescription() => "Removes hard falls";
+        protected override string GetDescription() => "For when no fall damage is not luxerious enough.\n\nRemoves the hard fall stun";
         protected override string GetName() => "Soft Fall";
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
     public class InfiniteBlast : EasyCharm
     {
         protected override int GetCharmCost() => 0;
-        protected override string GetDescription() => "So anyway, I started blasting.\n\n Makes Vengeful Spirit/Shade Soul cheaper to use";
+        protected override string GetDescription() => "So anyway, I started blasting.\n\nMakes Vengeful Spirit/Shade Soul cheaper to use";
         protected override string GetName() => "Infinite blast";
+        protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
+    }
+    public class OverrideGeoCap : EasyCharm
+    {
+        protected override int GetCharmCost() => 0;
+        protected override string GetDescription() => "The only thing making the Geo multipliers worth it.\n\nIncreases geo cap to the 32 bit limit";
+        protected override string GetName() => "Raise Geo Cap";
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
 
@@ -128,7 +135,8 @@ namespace Lego_Power_Bricks
             {"increaseHealth", new IncreaseHealth()},
             {"superSlap", new SuperSlap()},
             {"softFall", new SoftFall()},
-            {"infiniteBlast", new InfiniteBlast()}
+            {"infiniteBlast", new InfiniteBlast()},
+            {"overrideGeoCap", new OverrideGeoCap() }
         };
 
 
@@ -140,10 +148,24 @@ namespace Lego_Power_Bricks
             ModHooks.HeroUpdateHook += OnHeroUpdate;
             On.GameCameras.StartScene += AddMasks;
             ModHooks.GetPlayerIntHook += BuffNail;
+            On.PlayerData.AddGeo += PlayerData_AddGeo;
             if (ModHooks.GetMod("DebugMod") is Mod)
             {
                 HookDebug();
             }
+        }
+
+        private void PlayerData_AddGeo(On.PlayerData.orig_AddGeo orig, PlayerData self, int amount)
+        {
+            int current = self.GetInt("geo");
+            int newGeo = current + amount;
+
+            int customCap = (Charms["overrideGeoCap"].IsEquipped) ? 2147483647 : 9999999;
+
+            if (newGeo > customCap)
+                newGeo = customCap;
+
+            self.geo = newGeo;
         }
 
         public void OnHeroUpdate()
@@ -227,6 +249,7 @@ namespace Lego_Power_Bricks
                 UnModifyVengefulSpirit(hc);
                 vengefulSpiritModified = false;
             }
+            PlayerData.instance.AddGeo(0);
 
         }
         private IEnumerator RegenerateHealth()
