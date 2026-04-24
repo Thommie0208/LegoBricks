@@ -12,10 +12,6 @@ using UnityEngine;
 
 namespace Lego_Power_Bricks
 {
-    /*To do list:
-     * Add thorns brick?
-     * Start working on placing them in the world with SFCore somehow
-     */
     public class x2Multiplier : EasyCharm
     {
         protected override int GetCharmCost() => 0;
@@ -143,6 +139,7 @@ namespace Lego_Power_Bricks
             ModHooks.CharmUpdateHook += OnCharmUpdate;
             ModHooks.HeroUpdateHook += OnHeroUpdate;
             On.GameCameras.StartScene += AddMasks;
+            ModHooks.GetPlayerIntHook += BuffNail;
             if (ModHooks.GetMod("DebugMod") is Mod)
             {
                 HookDebug();
@@ -210,16 +207,6 @@ namespace Lego_Power_Bricks
             {
                 geoMultiplier = CalculateMultiplier();
             }
-            if (Charms["superSlap"].IsEquipped && !nailDamageIncreased)
-            {
-                data.nailDamage *= 2;
-                nailDamageIncreased = true;
-            }
-            else if (!Charms["superSlap"].IsEquipped && nailDamageIncreased)
-            {
-                data.nailDamage /= 2;
-                nailDamageIncreased = false;
-            }
             if (Charms["softFall"].IsEquipped && !hardFallTimeIncreased)
             {
                 hc.BIG_FALL_TIME = 999f;
@@ -250,6 +237,16 @@ namespace Lego_Power_Bricks
             HeroController.instance.AddHealth(1);
             Log("Finished healing");
             healing = false;
+        }
+
+        private int BuffNail(string intName, int damage)
+        {
+            if (intName == "nailDamage" && Charms["superSlap"].IsEquipped)
+            {
+                float addition = (float)damage * 0.75f;
+                damage += (int)addition; 
+            }
+            return damage;
         }
 
         private void ModifyVengefulSpirit(HeroController self)
@@ -331,7 +328,6 @@ namespace Lego_Power_Bricks
 
         public void AddGeo(On.HeroController.orig_AddGeo orig, HeroController self, int amount)
         {
-            //geoMultiplier = CalculateMultiplier();
             orig(self, amount * geoMultiplier);
         }
 
