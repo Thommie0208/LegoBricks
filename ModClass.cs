@@ -47,7 +47,7 @@ namespace Lego_Power_Bricks
     public class x10Multiplier : EasyCharm
     {
         protected override int GetCharmCost() => 0;
-        protected override string GetDescription() => "This will make you hit the geo cap so quickly, you wonder why you even wanted this brick.\n\nMultiplies geo worth by 10";
+        protected override string GetDescription() => "https://youtu.be/W8Z3MfNpJpE \n\nMultiplies geo worth by 10";
         protected override string GetName() => "Geo x10";
         protected override Sprite GetSpriteInternal() => AssemblyUtils.GetSpriteFromResources("Red_brick.png");
     }
@@ -161,7 +161,10 @@ namespace Lego_Power_Bricks
             int newGeo = current + amount;
 
             int customCap = (Charms["overrideGeoCap"].IsEquipped) ? 2147483647 : 9999999;
-
+            if (customCap == 2147483647)
+            {
+                Log("OverrideGeoCap Active");
+            }
             if (newGeo > customCap)
                 newGeo = customCap;
 
@@ -203,11 +206,13 @@ namespace Lego_Power_Bricks
             Log($"OnCharmUpdate called");
             if (Charms["geoMagnet"].IsEquipped)
             {
+                Log("GeoMagnet activated");
                 data.charmCost_1 = 0;
                 data.CalculateNotchesUsed();
             }
             else
             {
+                Log("GeoMagnet deactivated");
                 data.charmCost_1 = 1;
                 data.CalculateNotchesUsed();
             }
@@ -217,46 +222,48 @@ namespace Lego_Power_Bricks
             }
             if (Charms["increaseHealth"].IsEquipped && !healthIncreased)
             {
+                Log("increaseHealth activated");
                 healthIncreased = true;
                 hc.AddToMaxHealth(2);
             }
             else if (!Charms["increaseHealth"].IsEquipped && healthIncreased)
             {
+                Log("increaseHealth deactivated");
                 healthIncreased = false;
                 hc.AddToMaxHealth(-2);
             }
-            if (Charms["x2Multiplier"].IsEquipped || Charms["x4Multiplier"].IsEquipped || Charms["x6Multiplier"].IsEquipped || Charms["x8Multiplier"].IsEquipped || Charms["x10Multiplier"].IsEquipped)
-            {
-                geoMultiplier = CalculateMultiplier();
-            }
             if (Charms["softFall"].IsEquipped && !hardFallTimeIncreased)
             {
+                Log("softFall activated");
                 hc.BIG_FALL_TIME = 999f;
                 hardFallTimeIncreased = true;
             }
             else if (!Charms["softFall"].IsEquipped && hardFallTimeIncreased)
             {
+                Log("softFall deactivated");
                 hc.BIG_FALL_TIME = vanillaHardFallTime;
                 hardFallTimeIncreased = false;
             }
             if (Charms["infiniteBlast"].IsEquipped && !vengefulSpiritModified)
             {
+                Log("infiniteBlast activated");
                 ModifyVengefulSpirit(hc);
                 vengefulSpiritModified = true;
             }
             else if (!Charms["infiniteBlast"].IsEquipped && vengefulSpiritModified)
             {
+                Log("infiniteBlast deactivated");
                 UnModifyVengefulSpirit(hc);
                 vengefulSpiritModified = false;
             }
-            PlayerData.instance.AddGeo(0);
+            CalculateMultiplier();
 
         }
         private IEnumerator RegenerateHealth()
         {
             Log("Started healing");
             healing = true;
-            yield return new WaitForSeconds(2f);
+            yield return new WaitForSeconds(7f);
             HeroController.instance.AddHealth(1);
             Log("Finished healing");
             healing = false;
@@ -266,6 +273,7 @@ namespace Lego_Power_Bricks
         {
             if (intName == "nailDamage" && Charms["superSlap"].IsEquipped)
             {
+                Log("SuperSlap active");
                 float addition = (float)damage * 0.75f;
                 damage += (int)addition; 
             }
