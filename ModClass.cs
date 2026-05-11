@@ -118,6 +118,7 @@ namespace Lego_Power_Bricks
         private bool nailDamageIncreased = false;
         private bool hardFallTimeIncreased = false;
         private bool vengefulSpiritModified = false;
+        private bool geoCapModified = false;
         private int geoMultiplier;
         private float vanillaHardFallTime = 1.1f;
         private LayoutRoot? layout;
@@ -143,7 +144,7 @@ namespace Lego_Power_Bricks
         public override void Initialize(Dictionary<string, Dictionary<string, GameObject>> preloadedObjects)
         {
             On.HeroController.Awake += OnAwake;
-            On.HeroController.AddGeo += AddGeo;
+            //On.HeroController.AddGeo += AddGeo;
             ModHooks.CharmUpdateHook += OnCharmUpdate;
             ModHooks.HeroUpdateHook += OnHeroUpdate;
             On.GameCameras.StartScene += AddMasks;
@@ -155,21 +156,6 @@ namespace Lego_Power_Bricks
             }
         }
 
-        private void PlayerData_AddGeo(On.PlayerData.orig_AddGeo orig, PlayerData self, int amount)
-        {
-            int current = self.GetInt("geo");
-            int newGeo = current + amount;
-
-            int customCap = (Charms["overrideGeoCap"].IsEquipped) ? 2147483647 : 9999999;
-            if (customCap == 2147483647)
-            {
-                Log("OverrideGeoCap Active");
-            }
-            if (newGeo > customCap)
-                newGeo = customCap;
-
-            self.geo = newGeo;
-        }
 
         public void OnHeroUpdate()
         {
@@ -199,6 +185,7 @@ namespace Lego_Power_Bricks
             nailDamageIncreased = Charms["superSlap"].IsEquipped;
             hardFallTimeIncreased = Charms["softFall"].IsEquipped;
             vengefulSpiritModified = Charms["infiniteBlast"].IsEquipped;
+            geoCapModified = Charms["overrideGeoCap"].IsEquipped;
             orig(self);
         }
         public void OnCharmUpdate(PlayerData data, HeroController hc)
@@ -256,6 +243,18 @@ namespace Lego_Power_Bricks
                 UnModifyVengefulSpirit(hc);
                 vengefulSpiritModified = false;
             }
+            if (Charms["overrideGeoCap"].IsEquipped && !geoCapModified)
+            {
+                Log("overrideGeoCap activated");
+                //Set current geo count to saved count;
+                geoCapModified = true;
+            }
+            else if (!Charms["overrideGeoCap"].IsEquipped && vengefulSpiritModified)
+            {
+                Log("overrideGeoCap deactivated");
+                //Save geo count if it's above 9_999_999
+                geoCapModified = false;
+            }
             CalculateMultiplier();
 
         }
@@ -267,6 +266,21 @@ namespace Lego_Power_Bricks
             HeroController.instance.AddHealth(1);
             Log("Finished healing");
             healing = false;
+        }
+        private void PlayerData_AddGeo(On.PlayerData.orig_AddGeo orig, PlayerData self, int amount)
+        {
+            int current = self.GetInt("geo");
+            int newGeo = current + (amount * geoMultiplier);
+
+            int customCap = (Charms["overrideGeoCap"].IsEquipped) ? 2147483647 : 9999999;
+            if (customCap == 2147483647)
+            {
+                Log("OverrideGeoCap Active");
+            }
+            if (newGeo > customCap)
+                newGeo = customCap;
+
+            self.geo = newGeo;
         }
 
         private int BuffNail(string intName, int damage)
@@ -357,10 +371,10 @@ namespace Lego_Power_Bricks
             }
         }
 
-        public void AddGeo(On.HeroController.orig_AddGeo orig, HeroController self, int amount)
-        {
-            orig(self, amount * geoMultiplier);
-        }
+        //public void AddGeo(On.HeroController.orig_AddGeo orig, HeroController self, int amount)
+        //{
+        //    orig(self, amount * geoMultiplier);
+        //}
 
         private int CalculateMultiplier()
         {
