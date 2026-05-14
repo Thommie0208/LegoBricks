@@ -119,7 +119,8 @@ namespace Lego_Power_Bricks
         private bool hardFallTimeIncreased = false;
         private bool vengefulSpiritModified = false;
         private bool geoCapModified = false;
-        private int geoMultiplier;
+        private int geoCount;
+        private int geoMultiplier = 1;
         private float vanillaHardFallTime = 1.1f;
         private LayoutRoot? layout;
         internal static Lego_Power_Bricks Instance;
@@ -144,12 +145,13 @@ namespace Lego_Power_Bricks
         public override void Initialize(Dictionary<string, Dictionary<string, GameObject>> preloadedObjects)
         {
             On.HeroController.Awake += OnAwake;
-            //On.HeroController.AddGeo += AddGeo;
+            On.HeroController.AddGeo += AddGeo;
             ModHooks.CharmUpdateHook += OnCharmUpdate;
             ModHooks.HeroUpdateHook += OnHeroUpdate;
             On.GameCameras.StartScene += AddMasks;
             ModHooks.GetPlayerIntHook += BuffNail;
             On.PlayerData.AddGeo += PlayerData_AddGeo;
+            On.PlayerData.TakeGeo += OnTakeGeo;
             if (ModHooks.GetMod("DebugMod") is Mod)
             {
                 HookDebug();
@@ -162,7 +164,6 @@ namespace Lego_Power_Bricks
             if (PlayerData.instance.health < PlayerData.instance.maxHealth
                 && Charms["regenerateHealth"].IsEquipped && !healing)
             {
-                Log("Starting health regeneration");
                 GameManager.instance.StartCoroutine(RegenerateHealth());
             }
             if (Charms["softFall"].IsEquipped && HeroController.instance.fallTimer > HeroController.instance.BIG_FALL_TIME)
@@ -186,11 +187,12 @@ namespace Lego_Power_Bricks
             hardFallTimeIncreased = Charms["softFall"].IsEquipped;
             vengefulSpiritModified = Charms["infiniteBlast"].IsEquipped;
             geoCapModified = Charms["overrideGeoCap"].IsEquipped;
+            geoCount = PlayerData.instance.geo;
             orig(self);
         }
         public void OnCharmUpdate(PlayerData data, HeroController hc)
         {
-            Log($"OnCharmUpdate called");
+            //Log($"OnCharmUpdate called");
             if (Charms["geoMagnet"].IsEquipped)
             {
                 Log("GeoMagnet activated");
@@ -246,31 +248,38 @@ namespace Lego_Power_Bricks
             if (Charms["overrideGeoCap"].IsEquipped && !geoCapModified)
             {
                 Log("overrideGeoCap activated");
-                //Set current geo count to saved count;
+                if (geoCount > 9999999)
+                {
+                    data.geo = geoCount;
+                }
                 geoCapModified = true;
             }
-            else if (!Charms["overrideGeoCap"].IsEquipped && vengefulSpiritModified)
+            else if (!Charms["overrideGeoCap"].IsEquipped && geoCapModified)
             {
                 Log("overrideGeoCap deactivated");
-                //Save geo count if it's above 9_999_999
+                if (data.geo > 9999999)
+                {
+                    geoCount = data.geo;
+                    data.geo = 9999999;
+                }
                 geoCapModified = false;
             }
-            CalculateMultiplier();
+            geoMultiplier = CalculateMultiplier();
 
         }
         private IEnumerator RegenerateHealth()
         {
-            Log("Started healing");
+            //Log("Started healing");
             healing = true;
             yield return new WaitForSeconds(7f);
             HeroController.instance.AddHealth(1);
-            Log("Finished healing");
+            //Log("Finished healing");
             healing = false;
         }
         private void PlayerData_AddGeo(On.PlayerData.orig_AddGeo orig, PlayerData self, int amount)
         {
             int current = self.GetInt("geo");
-            int newGeo = current + (amount * geoMultiplier);
+            int newGeo = current + (amount);
 
             int customCap = (Charms["overrideGeoCap"].IsEquipped) ? 2147483647 : 9999999;
             if (customCap == 2147483647)
@@ -279,8 +288,26 @@ namespace Lego_Power_Bricks
             }
             if (newGeo > customCap)
                 newGeo = customCap;
-
+            if (newGeo > 9999999)
+            {
+                geoCount = newGeo;
+            }
+            //Log("geoCount: " + geoCount);
             self.geo = newGeo;
+        }
+
+        public void AddGeo(On.HeroController.orig_AddGeo orig, HeroController self, int amount)
+        {
+            orig(self, amount * geoMultiplier);
+        }
+
+        private void OnTakeGeo(On.PlayerData.orig_TakeGeo orig, PlayerData self, int amount)
+        {
+            if (!geoCapModified && geoCount > 0)
+            {
+                geoCount -= amount;
+            }
+            orig(self, amount);
         }
 
         private int BuffNail(string intName, int damage)
@@ -343,7 +370,7 @@ namespace Lego_Power_Bricks
         private void AddMasks(On.GameCameras.orig_StartScene orig, GameCameras self)
         {
             orig(self);
-            Log("Adding masks");
+            //Log("Adding masks");
             MasksOverflow(self);
             On.GameCameras.StartScene -= AddMasks;
         }
@@ -355,7 +382,7 @@ namespace Lego_Power_Bricks
             {
                 if (mask.transform.parent.gameObject.Find($"Health {i}") == null)
                 {
-                    Log("Adding mask " + i);
+                    //Log("Adding mask " + i);
                     GameObject newMask = Object.Instantiate(mask, mask.transform.parent);
                     newMask.name = $"Health {i}";
                     newMask.SetActive(true);
@@ -370,11 +397,6 @@ namespace Lego_Power_Bricks
                 }
             }
         }
-
-        //public void AddGeo(On.HeroController.orig_AddGeo orig, HeroController self, int amount)
-        //{
-        //    orig(self, amount * geoMultiplier);
-        //}
 
         private int CalculateMultiplier()
         {
