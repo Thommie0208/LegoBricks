@@ -112,7 +112,7 @@ namespace Lego_Power_Bricks
     public class Lego_Power_Bricks : Mod, ILocalSettings<Settings>
     {
         public Lego_Power_Bricks() : base("Lego Power Bricks") { }
-        public override string GetVersion() => "0.1.1";
+        public override string GetVersion() => "1.0.0";
         private bool healing = false;
         private bool healthIncreased = false;
         private bool nailDamageIncreased = false;
@@ -195,13 +195,13 @@ namespace Lego_Power_Bricks
             //Log($"OnCharmUpdate called");
             if (Charms["geoMagnet"].IsEquipped)
             {
-                Log("GeoMagnet activated");
+                //Log("GeoMagnet activated");
                 data.charmCost_1 = 0;
                 data.CalculateNotchesUsed();
             }
             else
             {
-                Log("GeoMagnet deactivated");
+                //Log("GeoMagnet deactivated");
                 data.charmCost_1 = 1;
                 data.CalculateNotchesUsed();
             }
@@ -284,7 +284,7 @@ namespace Lego_Power_Bricks
             int customCap = (Charms["overrideGeoCap"].IsEquipped) ? 2147483647 : 9999999;
             if (customCap == 2147483647)
             {
-                Log("OverrideGeoCap Active");
+                //Log("OverrideGeoCap Active");
             }
             if (newGeo > customCap)
                 newGeo = customCap;
@@ -303,10 +303,7 @@ namespace Lego_Power_Bricks
 
         private void OnTakeGeo(On.PlayerData.orig_TakeGeo orig, PlayerData self, int amount)
         {
-            if (!geoCapModified && geoCount > 0)
-            {
-                geoCount -= amount;
-            }
+            geoCount -= amount;
             orig(self, amount);
         }
 
